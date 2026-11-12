@@ -2,7 +2,7 @@
  "name": "Apex Loop Racing",
  "short_name": "Apex Loop",
  "description": "Neon arcade racing game",
- "start_url": ".",
+ "start_url": "play.html",
  "scope": ".",
  "display": "fullscreen",
  "background_color": "#0e1116",
