@@ -215,12 +215,15 @@ CARS.forEach((c,i)=>UP.forEach(u=>{c[u[2]]+=(UL[i]&&UL[i][u[0]]||0)*u[3]}));
 let money=0,own=new Set([0]),eq=0,TC=[],rc=0;
 try{money=+localStorage.apexM||0;JSON.parse(localStorage.apexO||'[0]').forEach(i=>own.add(i));eq=+localStorage.apexSel||0}catch(e){}
 if(!own.has(eq)||eq>=CARS.length)eq=0;
-const svM=()=>{try{localStorage.apexM=money;localStorage.apexO=JSON.stringify([...own]);localStorage.apexSel=eq}catch(e){}};
+let ADM={on:0,inf:0,lv:0,nos:0,spd:0};try{const q=JSON.parse(localStorage.apexAdm);if(q&&q.on)ADM=q}catch(e){}
+const svA=()=>{try{localStorage.apexAdm=JSON.stringify(ADM)}catch(e){}},ph=x=>{let h=7;for(const c of x)h=(h*31+c.charCodeAt(0))%1000003;return h};
+function admOpen(){if(ADM.on)return show('adm');const p=prompt('Admin PIN?');if(p===null)return;if(ph(p.trim())===481433){ADM.on=1;svA();show('adm')}else alert('Galat PIN')}
+const svM=()=>{if(ADM.inf&&money<9e8)money=999999999;try{localStorage.apexM=money;localStorage.apexO=JSON.stringify([...own]);localStorage.apexSel=eq}catch(e){}};
 const earn=n=>{n=Math.round(n);if(n>0){money+=n;svM()}return n},fmt=n=>Math.round(n).toLocaleString();
 const LV=[];for(let i=0;i<25;i++)LV.push({t:i%10,l:2+(i>5)+(i>12)+(i>19),a:+(.9+i*.015).toFixed(3),v:36+i*.35,c:120+i*8});
 let cur=-1,LD={s:[],xp:0};try{const q=JSON.parse(localStorage.apexL);if(q&&q.s)LD=q}catch(e){}
 const svL=()=>{try{localStorage.apexL=JSON.stringify(LD)}catch(e){}},lvl=()=>1+Math.floor(LD.xp/100),stars=n=>'★'.repeat(n)+'☆'.repeat(5-n);
-function lvDone(rk,tm){const L=LV[cur],par=L.l*ds*N/L.v,old=LD.s[cur]||0;let q=[3,2,1,0][rk-1]||0;if(rk<=3){if(tm<=par)q++;if(rc>=L.c)q++}
+function lvDone(rk,tm){if(ADM.nos||ADM.spd)return;const L=LV[cur],par=L.l*ds*N/L.v,old=LD.s[cur]||0;let q=[3,2,1,0][rk-1]||0;if(rk<=3){if(tm<=par)q++;if(rc>=L.c)q++}
  const xp=q?20+q*10+(rk===1?20:0):5;LD.xp+=xp;if(q>old){const b=(q-old)*50;earn(b);res.prize+=b}LD.s[cur]=Math.max(old,q);
  res.st=q;res.xp=xp;res.par=par.toFixed(1);res.unl=old===0&&q>0&&cur+1<LV.length;res.nx=cur+1<LV.length&&LD.s[cur]>0;svL()}
 const mm=(g,c,e)=>new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:c,roughness:.45,metalness:.3,emissive:e||0}));
@@ -608,7 +611,7 @@ const LB_URL='https://apex-loop-racing-default-rtdb.asia-southeast1.firebasedata
 let PID='',PNAME='';try{PID=localStorage.apexId||'';if(!PID){PID='p'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);localStorage.apexId=PID}PNAME=localStorage.apexName||''}catch(e){PID='p'+Math.random().toString(36).slice(2,9)}
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function lbMine(){return{n:PNAME||'Player',xp:LD.xp|0,cl:LD.s.filter(x=>x>0).length,st:LD.s.reduce((a,b)=>a+(b||0),0),t:Date.now()}}
-function lbSend(){if(!LB_URL||!PNAME)return;try{fetch(LB_URL+'/players/'+PID+'.json',{method:'PUT',body:JSON.stringify(lbMine())}).catch(()=>{})}catch(e){}}
+function lbSend(){if(!LB_URL||!PNAME||ADM.nos||ADM.spd)return;try{fetch(LB_URL+'/players/'+PID+'.json',{method:'PUT',body:JSON.stringify(lbMine())}).catch(()=>{})}catch(e){}}
 async function lbGet(){const c=new AbortController(),t=setTimeout(()=>c.abort(),9000);try{const r=await fetch(LB_URL+'/players.json',{signal:c.signal});clearTimeout(t);if(!r.ok)throw 0;const o=await r.json()||{};return Object.keys(o).map(k=>Object.assign({id:k},o[k])).filter(p=>p&&typeof p.xp==='number')}catch(e){clearTimeout(t);return null}}
 function askName(done){const q=$('nm'),i=$('nmi');i.value=PNAME;q.style.display='flex';setTimeout(()=>i.focus(),60);$('nmy').onclick=()=>{const v=i.value.replace(/[<>&"']/g,'').trim().slice(0,14);if(!v){i.focus();return}PNAME=v;try{localStorage.apexName=v}catch(e){}q.style.display='none';lbSend();if(done)done()}}
 async function lbShow(){const w=$('lbw');if(!w)return;
@@ -640,6 +643,7 @@ function show(s){scr=s;if(s!=='result')st='menu';ui(0);const M=$('menu'),el=(t,c
 <div class=hx-v>v1.0</div><button class=hx-tap id=htp>Press Start/Tap to Play</button></div>`;
   $('b1').onclick=$('htp').onclick=start;$('b6').onclick=()=>show('levels');$('b5').onclick=startD;$('b2').onclick=()=>show('garage');$('b3').onclick=()=>show('tracks');$('b4').onclick=$('hs').onclick=()=>show('set');
   $('hsh').onclick=()=>{try{navigator.share&&navigator.share({title:'Apex Loop',url:location.href})}catch(e){}};
+  {let tp=0,tt=0;const v=document.querySelector('.hx-v');if(v){v.style.padding='12px';v.onclick=()=>{const n=Date.now();tp=n-tt<1500?tp+1:1;tt=n;if(tp>=7){tp=0;admOpen()}}}}
   $('hml').onclick=()=>show('lb');lbSend();if(LB_URL&&!PNAME&&!window._nmAsk){window._nmAsk=1;askName()}}
  else if(s==='garage'){const c=me.c,ow=own.has(sel),COL=['e53935','1e88e5','43a047','fdd835','ff6d00','8e24aa','f5f5f5','2b2b2b'];
   M.innerHTML=top('GARAGE')+'<div class=info><div id=cn>'+c.n+'</div><div style="opacity:.8;font-size:12px">'+TY[c.t].n+' · '+(sel+1)+'/'+CARS.length+'</div>'+bar('Speed',(c.top-44)/24*100)+bar('Acceleration',(c.acc-18)/22*100)+bar('Handling',c.hand/1.3*100)+
@@ -658,8 +662,17 @@ function show(s){scr=s;if(s!=='result')st='menu';ui(0);const M=$('menu'),el=(t,c
   TR.forEach((t,i)=>el($('cards'),'card'+(i==trk?' sel':''),t.n+'<small>Best '+(b[i]?b[i]+' s':'--')+'</small>',()=>{trk=i;buildTrack(i);reset();show('tracks')}));
   $('b1').onclick=start;$('bk').onclick=()=>show('home')}
  else if(s==='levels'){M.innerHTML=top('LEVELS')+'<div class=lvg id=lvg></div>';let nx=0;
-  LV.forEach((L,i)=>{const u=i===0||(LD.s[i-1]||0)>0,n=LD.s[i]||0;if(u&&!n&&!nx)nx=i+1;el($('lvg'),'lc'+(u?'':' lk'),'<b>'+(i+1)+'</b><small>'+TR[L.t].n+'</small><small>'+L.l+' laps</small><span>'+(u?stars(n):'🔒')+'</span>',()=>{if(u)startL(i)})});
+  LV.forEach((L,i)=>{const u=i===0||ADM.lv||(LD.s[i-1]||0)>0,n=LD.s[i]||0;if(u&&!n&&!nx)nx=i+1;el($('lvg'),'lc'+(u?'':' lk'),'<b>'+(i+1)+'</b><small>'+TR[L.t].n+'</small><small>'+L.l+' laps</small><span>'+(u?stars(n):'🔒')+'</span>',()=>{if(u)startL(i)})});
   {const q=$('lvg').children[(nx||LV.length)-1];if(q)$('lvg').scrollTop=Math.max(0,q.offsetTop-90)}
+  $('bk').onclick=()=>show('home')}
+ else if(s==='adm'){M.innerHTML=top('ADMIN 🛠️')+'<div class=pn id=pn></div>';$('pn').style.cssText+=';max-height:84vh;overflow-y:auto;top:55%';
+  const tg=(l,k)=>el($('pn'),'tg',l+'<b class="'+(ADM[k]?'on':'')+'">'+(ADM[k]?'ON':'OFF')+'</b>',()=>{ADM[k]^=1;svA();svM();show('adm')}),ac=(l,f)=>el($('pn'),'tg',l+'<b class=on>▶</b>',()=>{f();svM();show('adm')});
+  ac('💰 +10,00,000 coins',()=>{money+=1e6});tg('♾️ Unlimited coins','inf');
+  ac('🚗 Saari cars unlock',()=>CARS.forEach((c,i)=>own.add(i)));
+  ac('⚙️ Saare upgrades MAX',()=>{CARS.forEach((c,i)=>UP.forEach(u=>{const o=UL[i]=UL[i]||{},lv=o[u[0]]||0;c[u[2]]+=(5-lv)*u[3];o[u[0]]=5}));try{localStorage.apexU=JSON.stringify(UL)}catch(e){}});
+  tg('🔓 Saare levels unlock','lv');tg('⚡ Unlimited NOS','nos');tg('🚀 Super speed (+30%)','spd');
+  $('pn').insertAdjacentHTML('beforeend','<p style="font-size:12px;opacity:.7">NOS / Super speed ON ho to level progress aur leaderboard update nahi hoga.</p>');
+  el($('pn'),'tg','🔒 Admin band karo<b>▶</b>',()=>{ADM={on:0,inf:0,lv:0,nos:0,spd:0};svA();show('home')});
   $('bk').onclick=()=>show('home')}
  else if(s==='lb'){M.innerHTML=top('LEADERBOARD')+'<div class=lbw id=lbw></div>';$('bk').onclick=()=>show('home');lbShow()}
  else if(s==='set'){M.innerHTML=top('SETTINGS')+'<div class=pn id=pn></div>';
@@ -699,7 +712,7 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-prev)/1000
    if(!air&&lat<W/2&&BP.some(p=>s>=p.a&&s<=p.b)){if(!(me.boost>0))flash('BOOST! ⚡');me.boost=1.3}
    if(me.boost>0)me.boost-=dt;bo=me.boost>0;
    me.pt+=((air?Math.atan2(me.vy,Math.max(8,vf))*.9:Math.atan(gsl(s)))-me.pt)*Math.min(1,9*dt)}else me.pt=0;
-  const drift=k.d&&Math.abs(vf)>14,topE=c.top*(off?.4:1)*(ORD(trk)?(c.t==='suv'?1.06:.88):1)+(nosOn?22:0)+(bo?16:0)+(me.pb>0?30:0),sd=(me.slip>0||me.stun>0)?0:k.r-k.l;
+  const drift=k.d&&Math.abs(vf)>14,topE=c.top*(ADM.spd?1.3:1)*(off?.4:1)*(ORD(trk)?(c.t==='suv'?1.06:.88):1)+(nosOn?22:0)+(bo?16:0)+(me.pb>0?30:0),sd=(me.slip>0||me.stun>0)?0:k.r-k.l;
   const sp0=Math.hypot(vf,vl),ang=Math.atan2(Math.abs(vl),Math.abs(vf)),slide=run&&sp0>10&&vf>0&&ang>.2&&ang<1.45;
   if(run&&mode==='drift')drScore(slide,sp0,ang,dt);
   if(run&&!air&&((slide&&!off)||(k.b&&vf>28)))fxTick(dt,sn,cs,slide);else skx=1e9;
@@ -707,7 +720,7 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-prev)/1000
   if(k.b&&!air)vf-=(vf>0?60:25)*dt;
   if(me.pb>0&&!air)vf+=60*dt*Math.max(0,1-vf/topE);if(me.flat>0){vf*=Math.exp(-.7*dt);if(vf>c.top*.55)vf-=(vf-c.top*.55)*3*dt}
   vf-=vf*(air?.03:off?1.2:.12)*dt;if(vf>topE)vf-=(vf-topE)*2.5*dt;
-  if(nosOn)me.nos=Math.max(0,me.nos-10*dt);else if(!k.n)me.nos=Math.min(100,me.nos+5*dt);
+  if(ADM.nos)me.nos=100;else if(nosOn)me.nos=Math.max(0,me.nos-10*dt);else if(!k.n)me.nos=Math.min(100,me.nos+5*dt);
   if(drift&&sd)me.nos=Math.min(100,me.nos+24*dt);
   vl*=Math.exp(-(air?.4:drift?1.1:me.slip>0?.5:9)*dt);
   me.vx=sn*vf+cs*vl;me.vz=cs*vf-sn*vl;
